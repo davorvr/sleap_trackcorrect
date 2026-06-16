@@ -4,8 +4,10 @@ Standalone local web app for reviewing two-animal social SLEAP `.slp` files and 
 
 ## Quick Start
 
-1. Populate `videos/` and `predictions/` directories
-2. Run `bash ./start_server.sh`
+1. Make sure you have `uv` installed
+2. Download the repo, unpack it, and `cd` into the dir
+3. Populate `videos/` and `predictions/` directories
+4. Run `bash ./start_server.sh`
 
 ## Detailed instructions
 
