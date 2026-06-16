@@ -3,8 +3,8 @@
 SLEAP Social Track Corrector — server + review UI.
 
 Usage:
-    uv run python explore/sleap_review/serve.py \
-        --labels-dir sources/predictions/cleaned/social \
+    uv run python serve.py \
+        --labels-dir /path/to/predictions/files \
         --video-dir /path/to/video/files \
         [--port 8500]
 
