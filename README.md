@@ -54,3 +54,38 @@ uv run --project ./ python serve.py \
 ```
 
 Open `http://localhost:8500` after startup.
+
+## Auto-Propagation Algorithms
+
+When you manually assign a selected animal to the other track, the app can propagate that correction forward and backward from the edited frame. Auto-propagation never changes the original input file directly; changes are applied only when you click `Save to corrected/`.
+
+### Distance Stop (Current)
+
+This is the simpler mode. After the edited frame is swapped, the app keeps swapping the same two track labels in neighboring frames, moving forward and backward.
+
+Propagation stops when one of these happens:
+
+- the two animal centroids are closer than `Min distance`
+- the `Limit max frames` cap is enabled and reached
+- the video reaches the first or last frame
+
+Use this mode when a track identity swap is obvious and persists across a clear span where the animals remain separated. It is predictable, but it does not check whether the motion or pose continuity actually supports each propagated swap.
+
+### Smart Continuity
+
+This mode still starts from the manually corrected frame, but each neighboring frame is evaluated before it is swapped. For each frame, the app compares two possibilities:
+
+- keep the current track assignment
+- swap the two track assignments
+
+It scores both possibilities using pose and motion continuity from the previous accepted frame. The score combines centroid movement and matching named keypoints such as `nose`, `ear_L`, `ear_R`, `tail_base`, and `neck`. Keypoints with higher SLEAP confidence contribute more than low-confidence keypoints.
+
+The frame is swapped only when the swapped assignment is clearly better than the current assignment. Propagation stops when the evidence is ambiguous, when there is a large implausible jump, when either animal is missing, or when the two animals are closer than `Min distance`.
+
+Use this mode when you want safer automatic correction around uncertain regions. It is less aggressive than distance mode and is designed to avoid propagating through crossings, close interactions, or occlusions.
+
+### Controls
+
+`Min distance` applies to both algorithms. In `Distance Stop`, it is the main stop rule. In `Smart Continuity`, it is a hard ambiguity stop: the app will not auto-propagate through frames where animals are closer than this distance.
+
+`Limit max frames` is disabled by default. When disabled, propagation can continue until an algorithm-specific stop condition or the edge of the video. When enabled, propagation is capped to the selected number of frames in each direction.
