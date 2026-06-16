@@ -1,0 +1,14 @@
+[project]
+name = "sleap-social-track-corrector"
+version = "0.1.0"
+description = "Local web app for reviewing and correcting two-animal SLEAP social tracks."
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "flask",
+    "numpy",
+    "opencv-python",
+    "sleap-io",
+]
+
+[tool.uv]
+package = false

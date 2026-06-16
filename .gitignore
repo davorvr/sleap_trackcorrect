@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local data copied into the standalone review app.
+predictions/*
+!predictions/.gitkeep
+videos/*
+!videos/.gitkeep
+custom_startup.sh
