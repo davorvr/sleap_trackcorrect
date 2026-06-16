@@ -2,6 +2,11 @@
 
 Standalone local web app for reviewing two-animal social SLEAP `.slp` files and saving corrected track assignments.
 
+## Quick Start
+
+1. Populate `videos/` and `predictions/` directories
+2. Run `bash ./start_server.sh`
+
 ## Data Folders
 
 By default, the launcher uses these folders inside this tool directory:
@@ -18,7 +23,7 @@ The folders are intentionally empty in git. Their contents are ignored so large 
 From this repository root:
 
 ```bash
-uv sync --project explore/sleap_review
+uv sync
 ```
 
 Or run directly; uv will create the environment automatically:
@@ -32,7 +37,7 @@ Corrected files are saved to `predictions/corrected/` by default.
 You can still pass explicit directories:
 
 ```bash
-bash explore/sleap_review/start_server.sh LABELS_DIR VIDEO_DIR 8500
+bash ./start_server.sh LABELS_DIR VIDEO_DIR 8500
 ```
 
 `LABELS_DIR` can be relative or absolute. `VIDEO_DIR` can be relative or absolute. Corrected files are saved to `LABELS_DIR/corrected/`.
@@ -40,9 +45,9 @@ bash explore/sleap_review/start_server.sh LABELS_DIR VIDEO_DIR 8500
 ## Direct uv Run
 
 ```bash
-uv run --project explore/sleap_review python explore/sleap_review/serve.py \
-  --labels-dir explore/sleap_review/predictions \
-  --video-dir explore/sleap_review/videos \
+uv run --project ./ python serve.py \
+  --labels-dir predictions/ \
+  --video-dir videos/ \
   --port 8500
 ```
 
