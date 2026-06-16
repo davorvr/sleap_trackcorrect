@@ -1,0 +1,1090 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SLEAP Social Track Corrector</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #1a1a2e;
+      --panel: #16213e;
+      --surface: #0f3460;
+      --ink: #e4e4e7;
+      --muted: #9ca3af;
+      --accent: #e94560;
+      --accent2: #533483;
+      --green: #22c55e;
+      --orange: #f59e0b;
+      --blue: #3b82f6;
+      --border: #1e293b;
+      --hover: #1e3a5f;
+      --radius: 8px;
+      --track0: #f59e0b;
+      --track1: #3b82f6;
+      --track0bg: rgba(245, 158, 11, 0.15);
+      --track1bg: rgba(59, 130, 246, 0.15);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      overflow: hidden;
+      height: 100vh;
+    }
+    header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .file-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+    select {
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 8px;
+      font-size: 13px;
+      max-width: 440px;
+      min-width: 200px;
+    }
+    button {
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--hover); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+    button.primary:hover { filter: brightness(1.1); }
+    button.small { padding: 4px 8px; font-size: 12px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px;
+      height: calc(100vh - 52px);
+    }
+    .sidebar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    }
+    .main {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .video-container {
+      position: relative;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; }
+    video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #000;
+      transform-origin: center center;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-wrap: wrap;
+    }
+    .timeline-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px 10px;
+    }
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    #distanceTimeline {
+      position: static;
+      display: block;
+      width: 100%;
+      height: 64px;
+      cursor: pointer;
+      border-radius: 6px;
+      background: #07111f;
+    }
+    .frame-input {
+      width: 70px;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 6px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .speed-btns { display: flex; gap: 2px; }
+    .speed-btns button.active { background: var(--accent); border-color: var(--accent); color: white; }
+    .zoom-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .zoom-control input[type="range"] {
+      width: 120px;
+      accent-color: var(--accent);
+    }
+    .track-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 10px;
+      border-left: 3px solid transparent;
+    }
+    .track-card.t0 { border-left-color: var(--track0); }
+    .track-card.t1 { border-left-color: var(--track1); }
+    .track-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .track-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .track-dot.t0 { background: var(--track0); }
+    .track-dot.t1 { background: var(--track1); }
+    .track-name-input {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 3px 6px;
+      font-size: 13px;
+      font-weight: 600;
+      width: 80px;
+    }
+    .track-name-input:hover, .track-name-input:focus {
+      border-color: var(--border);
+      background: var(--bg);
+    }
+    .prop-row {
+      display: grid;
+      grid-template-columns: 82px minmax(90px, 1fr) 68px;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .prop-row label {
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 0;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .prop-row input[type="range"] {
+      width: 100%;
+      min-width: 0;
+      accent-color: var(--accent);
+    }
+    .prop-row span {
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 68px;
+      width: 68px;
+      text-align: right;
+      white-space: nowrap;
+      overflow: visible;
+    }
+    .prop-mode {
+      width: 100%;
+      max-width: none;
+      margin-top: 8px;
+    }
+    .prop-help {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .sep { border-top: 1px solid var(--border); margin: 8px 0; }
+    .edit-list { max-height: 120px; overflow-y: auto; font-size: 12px; color: var(--muted); }
+    .edit-item { padding: 2px 0; border-bottom: 1px solid var(--border); }
+    .edit-item .undo { color: var(--accent); cursor: pointer; margin-left: 8px; }
+    label.toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+    .paused-indicator {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.7);
+      color: var(--orange);
+      padding: 2px 8px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .drag-hint {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.5);
+      color: var(--muted);
+      padding: 2px 8px;
+      border-radius: var(--radius);
+      font-size: 11px;
+    }
+    #status { font-size: 12px; color: var(--green); min-height: 18px; }
+    @media (max-width: 900px) {
+      body { overflow: auto; height: auto; }
+      .layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .video-container { min-height: 60vh; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>SLEAP Track Corrector</h1>
+  <div class="file-nav">
+    <select id="fileSelect"><option>— loading —</option></select>
+    <button id="prevFile" title="Previous file">&larr;</button>
+    <button id="nextFile" title="Next file">&rarr;</button>
+    <span id="fileCount" style="font-size:12px;color:var(--muted);white-space:nowrap;"></span>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Tracks</label>
+      <div id="trackCards"></div>
+      <button id="swapAll" class="small" style="margin-top:8px;width:100%;">&harr; Swap all tracks</button>
+    </div>
+
+    <div class="sep"></div>
+
+    <div>
+      <label style="display:block;margin-bottom:6px;">Selected instance</label>
+      <div id="selectedInfo" style="font-size:12px;color:var(--muted);">None</div>
+      <div style="display:flex;gap:4px;margin-top:6px;">
+        <button id="assignT0" class="small" style="flex:1;">Assign to <span id="assignT0Label">—</span></button>
+        <button id="assignT1" class="small" style="flex:1;">Assign to <span id="assignT1Label">—</span></button>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div>
+      <label class="toggle">
+        <input type="checkbox" id="propagateEnabled" checked>
+        Auto-propagate
+      </label>
+      <select id="propMode" class="prop-mode">
+        <option value="distance">Distance stop (current)</option>
+        <option value="smart">Smart continuity</option>
+      </select>
+      <div class="prop-help" id="propHelp">
+        Current mode swaps outward until animals get closer than min distance.
+      </div>
+      <div class="prop-row">
+        <label>Min distance</label>
+        <input type="range" id="propDist" min="5" max="200" value="50" step="5">
+        <span id="propDistVal">50 px</span>
+      </div>
+      <label class="toggle" style="margin-top:8px;">
+        <input type="checkbox" id="propFrameLimit">
+        Limit max frames
+      </label>
+      <div class="prop-row">
+        <label>Max frames</label>
+        <input type="range" id="propFrames" min="10" max="5000" value="500" step="10" disabled>
+        <span id="propFramesVal">500</span>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div>
+      <button id="saveBtn" class="primary" style="width:100%;">Save to corrected/</button>
+      <div id="playbackSpeed" style="margin-top:10px;font-size:12px;color:var(--muted);">
+        Playback speed:
+        <div class="speed-btns">
+          <button class="small" data-speed="0.5">0.5x</button>
+          <button class="small active" data-speed="1">1x</button>
+          <button class="small" data-speed="2">2x</button>
+          <button class="small" data-speed="5">5x</button>
+          <button class="small" data-speed="10">10x</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="edit-list" id="editList">
+      <span style="color:var(--muted);">No edits yet</span>
+    </div>
+
+    <div id="status"></div>
+  </aside>
+
+  <div class="main">
+    <div class="video-container" id="videoContainer">
+      <video id="videoElement" muted playsinline preload="auto"></video>
+      <canvas id="overlay"></canvas>
+      <div class="paused-indicator" id="pausedIndicator" style="display:none;">⏸ PAUSED</div>
+      <div class="drag-hint">Drag for frame align: ← click to select node</div>
+    </div>
+
+    <div class="timeline-panel">
+      <div class="timeline-header">
+        <span>Distance seek bar</span>
+        <span id="timelineLegend">highlight = distance &gt; 50 px</span>
+      </div>
+      <canvas id="distanceTimeline" height="64"></canvas>
+    </div>
+
+    <div class="controls">
+      <button id="firstBtn" title="First frame">⏮</button>
+      <button id="bwd10Btn" title="-10 frames" style="font-size:11px;">-10</button>
+      <button id="bwdBtn" title="-1 frame">◀</button>
+      <button id="playPauseBtn" title="Play / Pause">▶ / ⏸</button>
+      <button id="fwdBtn" title="+1 frame">▶</button>
+      <button id="fwd10Btn" title="+10 frames" style="font-size:11px;">+10</button>
+      <button id="lastBtn" title="Last frame">⏭</button>
+      <input type="number" id="frameInput" class="frame-input" min="0" value="0" step="1">
+      <span style="font-size:12px;color:var(--muted);">/ <span id="totalFrames">0</span></span>
+      <div class="zoom-control">
+        <span>Zoom</span>
+        <input type="range" id="zoomSlider" min="100" max="300" value="100" step="10">
+        <span id="zoomVal">100%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+<!-- INLINE JS -->
+const A = (s) => document.getElementById(s);
+const Q = (s) => document.querySelector(s);
+
+// === State ===
+let files = [];
+let skeleton = { nodes: [], edges: [] };
+let currentFileIdx = -1;
+let currentFrame = 0;
+let totalFrames = 0;
+let playing = false;
+let playSpeed = 1;
+let videoZoom = 1;
+let selectedInstance = null; // { instance_idx, track_name, x, y }
+let edits = [];             // { frame_idx, instance_idx, old_track, new_track }
+let trackLabels = {};       // e.g. { "track_0": "crni10", "track_1": "crveni1" }
+let frameCache = {};        // cached frame data
+let currentFrameData = null;
+let syncRequest = null;
+let lastSyncedFrame = -1;
+let overlayRequestInFlight = false;
+let frameDistances = null;
+let distanceLoadToken = 0;
+const CACHE_LIMIT = 200;
+const FRAME_SIZE = { w: 640, h: 640 };
+
+// === File loading ===
+async function loadFiles() {
+    const res = await fetch("/api/files");
+    const data = await res.json();
+    files = data.files || [];
+    skeleton = data.skeleton || { nodes: [], edges: [] };
+    const sel = A("fileSelect");
+    sel.innerHTML = files.map((f, i) => `<option value="${i}">${f.filename}</option>`).join("");
+    sel.onchange = () => loadFile(parseInt(sel.value));
+    A("fileCount").textContent = files.length ? `1 / ${files.length}` : "0 files";
+    if (files.length > 0) loadFile(0);
+}
+
+function loadFile(idx) {
+    currentFileIdx = idx;
+    A("fileSelect").value = idx;
+    A("fileCount").textContent = `${idx + 1} / ${files.length}`;
+    const f = files[idx];
+    totalFrames = f.n_frames;
+    A("totalFrames").textContent = totalFrames;
+    currentFrame = 0;
+    playing = false;
+    frameCache = {};
+    currentFrameData = null;
+    lastSyncedFrame = -1;
+    overlayRequestInFlight = false;
+    frameDistances = null;
+    distanceLoadToken += 1;
+    edits = [];
+
+    const video = A("videoElement");
+    video.pause();
+    video.src = `/api/video?file=${encodeURIComponent(f.path)}`;
+    video.playbackRate = playSpeed;
+    applyVideoZoom();
+    video.onerror = () => statusMsg("Could not load MP4 video. Check server log/video path.", true);
+    video.onloadedmetadata = () => seekToFrame(0);
+    video.onseeked = () => syncOverlayFromVideo(true);
+    video.load();
+
+    trackLabels = {};
+    if (f.animal_ids[0]) trackLabels[f.tracks[0]] = f.animal_ids[0];
+    if (f.animal_ids[1] && f.tracks[1]) trackLabels[f.tracks[1]] = f.animal_ids[1];
+
+    A("frameInput").max = totalFrames - 1;
+    A("frameInput").value = 0;
+    renderTrackCards();
+    drawDistanceTimeline();
+    loadFrameDistances(f, distanceLoadToken);
+    renderEditList();
+    statusMsg("");
+}
+
+async function loadFrameDistances(fileEntry, token) {
+    const legend = A("timelineLegend");
+    legend.textContent = "loading distance timeline...";
+    try {
+        const res = await fetch(`/api/distances?file=${encodeURIComponent(fileEntry.path)}`);
+        const data = await res.json();
+        if (token !== distanceLoadToken) return;
+        frameDistances = data.distances || [];
+        drawDistanceTimeline();
+    } catch (err) {
+        if (token !== distanceLoadToken) return;
+        frameDistances = null;
+        legend.textContent = "distance timeline unavailable";
+    }
+}
+
+function drawDistanceTimeline() {
+    const canvas = A("distanceTimeline");
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(1, Math.floor(rect.width * dpr));
+    const height = Math.max(1, Math.floor(rect.height * dpr));
+    if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = rect.width;
+    const h = rect.height;
+    const threshold = parseFloat(A("propDist").value || "50");
+    A("timelineLegend").textContent = `highlight = distance > ${threshold} px`;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#07111f";
+    ctx.fillRect(0, 0, w, h);
+
+    const plotTop = 6;
+    const plotBottom = h - 8;
+    const plotH = plotBottom - plotTop;
+    ctx.fillStyle = "#172554";
+    ctx.fillRect(0, plotTop, w, plotH);
+
+    if (frameDistances && frameDistances.length > 0) {
+        const finite = frameDistances.filter(d => d != null && Number.isFinite(d));
+        const maxD = finite.length ? Math.max(threshold, ...finite) : threshold;
+        const denom = Math.max(1, frameDistances.length - 1);
+        const yForDistance = d => plotBottom - Math.min(1, d / maxD) * plotH;
+        const thresholdY = yForDistance(threshold);
+
+        ctx.fillStyle = "rgba(34, 197, 94, 0.58)";
+        let inRun = false;
+        let runStart = 0;
+        for (let i = 0; i <= frameDistances.length; i++) {
+            const d = i < frameDistances.length ? frameDistances[i] : null;
+            const ok = d != null && Number.isFinite(d) && d > threshold;
+            if (ok && !inRun) {
+                inRun = true;
+                runStart = i;
+            } else if (!ok && inRun) {
+                const x0 = (runStart / denom) * w;
+                const x1 = (i / denom) * w;
+                ctx.fillRect(x0, plotTop, Math.max(1, x1 - x0), Math.max(1, thresholdY - plotTop));
+                inRun = false;
+            }
+        }
+
+        ctx.strokeStyle = "rgba(248, 250, 252, 0.45)";
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, thresholdY);
+        ctx.lineTo(w, thresholdY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Subtle distance trace for context, drawn over the threshold band.
+        ctx.beginPath();
+        let penDown = false;
+        frameDistances.forEach((d, i) => {
+            if (d == null || !Number.isFinite(d)) {
+                penDown = false;
+                return;
+            }
+            const x = (i / denom) * w;
+            const y = yForDistance(d);
+            if (!penDown) {
+                ctx.moveTo(x, y);
+                penDown = true;
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        ctx.strokeStyle = "rgba(226, 232, 240, 0.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    } else {
+        ctx.fillStyle = "rgba(148, 163, 184, 0.7)";
+        ctx.font = "12px system-ui, sans-serif";
+        ctx.fillText("Loading distance timeline...", 10, plotTop + 18);
+    }
+
+    // Current frame marker.
+    const markerX = (currentFrame / Math.max(1, totalFrames - 1)) * w;
+    ctx.strokeStyle = "#f8fafc";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(markerX, 3);
+    ctx.lineTo(markerX, h - 3);
+    ctx.stroke();
+}
+
+function applyVideoZoom() {
+    const video = A("videoElement");
+    video.style.transform = `scale(${videoZoom})`;
+    A("zoomVal").textContent = `${Math.round(videoZoom * 100)}%`;
+    if (currentFrameData) drawOverlay(currentFrameData);
+}
+
+// === Track cards ===
+function renderTrackCards() {
+    const f = files[currentFileIdx];
+    if (!f) return;
+    const names = [
+        trackLabels[f.tracks[0]] || f.tracks[0],
+        trackLabels[f.tracks[1]] || f.tracks[1],
+    ];
+    A("trackCards").innerHTML = f.tracks.map((t, i) => `
+        <div class="track-card t${i}">
+          <div class="track-header">
+            <span class="track-dot t${i}"></span>
+            <input class="track-name-input"
+                   value="${names[i]}" data-track="${t}"
+                   onchange="renameTrack('${t}', this.value)">
+          </div>
+          <div style="font-size:11px;color:var(--muted);">${t}</div>
+        </div>
+    `).join("");
+    A("assignT0Label").textContent = names[0];
+    A("assignT1Label").textContent = names[1];
+}
+
+function renameTrack(trackName, newLabel) {
+    trackLabels[trackName] = newLabel || trackName;
+    renderTrackCards();
+}
+
+function swapAllTracks() {
+    const f = files[currentFileIdx];
+    if (!f || f.tracks.length < 2) return;
+    const t0 = f.tracks[0], t1 = f.tracks[1];
+    const l0 = trackLabels[t0], l1 = trackLabels[t1];
+    trackLabels[t0] = l1 || t1;
+    trackLabels[t1] = l0 || t0;
+    edits.forEach(e => {
+        if (e.new_track === t0) e.new_track = t1;
+        else if (e.new_track === t1) e.new_track = t0;
+    });
+    renderTrackCards();
+    renderEditList();
+}
+
+// === Frame navigation ===
+async function loadFrameData(fi) {
+    const f = files[currentFileIdx];
+    if (!f) return null;
+
+    const cacheKey = `${f.path}__${fi}`;
+    let frameData = frameCache[cacheKey];
+    if (!frameData) {
+        const res = await fetch(`/api/frame?file=${encodeURIComponent(f.path)}&frame=${fi}`);
+        if (!res.ok) {
+            statusMsg(`Could not load pose data for frame ${fi}`, true);
+            return null;
+        }
+        frameData = await res.json();
+        if (Object.keys(frameCache).length > CACHE_LIMIT) {
+            const oldest = Object.keys(frameCache)[0];
+            delete frameCache[oldest];
+        }
+        frameCache[cacheKey] = frameData;
+    }
+    return frameData;
+}
+
+async function seekToFrame(fi) {
+    fi = Math.max(0, Math.min(totalFrames - 1, fi));
+    currentFrame = fi;
+    A("frameInput").value = fi;
+    drawDistanceTimeline();
+    selectedInstance = null;
+
+    const f = files[currentFileIdx];
+    if (!f) return;
+
+    const video = A("videoElement");
+    const targetTime = fi / (f.fps || 50);
+    if (Number.isFinite(targetTime) && Math.abs(video.currentTime - targetTime) > 0.001) {
+        video.currentTime = targetTime;
+    }
+
+    const frameData = await loadFrameData(fi);
+    if (!frameData) return;
+    currentFrameData = frameData;
+    drawOverlay(frameData);
+
+    A("selectedInfo").textContent = "None";
+}
+
+async function syncOverlayFromVideo(force = false) {
+    const f = files[currentFileIdx];
+    if (!f) return;
+    if (!force && overlayRequestInFlight) return;
+    const video = A("videoElement");
+    if (!Number.isFinite(video.currentTime)) return;
+
+    const fi = Math.max(0, Math.min(totalFrames - 1, Math.round(video.currentTime * (f.fps || 50))));
+    if (!force && fi === lastSyncedFrame) return;
+    lastSyncedFrame = fi;
+    currentFrame = fi;
+    A("frameInput").value = fi;
+    drawDistanceTimeline();
+
+    overlayRequestInFlight = true;
+    const frameData = await loadFrameData(fi);
+    overlayRequestInFlight = false;
+    if (!frameData) return;
+    if (!force && fi !== currentFrame) return;
+    currentFrameData = frameData;
+    drawOverlay(frameData);
+}
+
+function drawOverlay(frameData) {
+    const canvas = A("overlay");
+    const container = A("videoContainer");
+    const video = A("videoElement");
+
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const iw = video.videoWidth;
+    const videoRect = video.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const ox = videoRect.left - containerRect.left;
+    const oy = videoRect.top - containerRect.top;
+    const scale = videoRect.width / iw;
+
+    canvas.width = cw;
+    canvas.height = ch;
+    canvas.style.width = cw + "px";
+    canvas.style.height = ch + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, cw, ch);
+
+    const f = files[currentFileIdx];
+    if (!f || !frameData.instances) return;
+
+    const nodeR = 4;
+    const edgeW = 2;
+    const colors = ["#f59e0b", "#3b82f6"];
+
+    frameData.instances.forEach((inst, iIdx) => {
+        const ti = f.tracks.indexOf(inst.track);
+        const color = ti >= 0 ? colors[ti] : colors[iIdx % colors.length];
+        const pts = inst.points;
+        if (!pts || pts.length === 0) return;
+
+        // Draw edges
+        skeleton.edges.forEach(([src, dst]) => {
+            const si = pts.findIndex(p => p.name === src);
+            const di = pts.findIndex(p => p.name === dst);
+            if (si < 0 || di < 0) return;
+            const sp = pts[si], dp = pts[di];
+            if (sp.x == null || sp.y == null || dp.x == null || dp.y == null) return;
+            ctx.beginPath();
+            ctx.moveTo(ox + sp.x * scale, oy + sp.y * scale);
+            ctx.lineTo(ox + dp.x * scale, oy + dp.y * scale);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = edgeW;
+            ctx.globalAlpha = 0.7;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        });
+
+        // Draw nodes
+        pts.forEach(pt => {
+            if (pt.x == null || pt.y == null) return;
+            const isSelected = selectedInstance
+                && selectedInstance.track_name === inst.track
+                && selectedInstance.instance_idx === iIdx;
+            ctx.beginPath();
+            ctx.arc(ox + pt.x * scale, oy + pt.y * scale, isSelected ? 6 : nodeR, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? "#fff" : color;
+            ctx.fill();
+            ctx.strokeStyle = isSelected ? color : "rgba(0,0,0,0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        });
+    });
+}
+
+// === Click handling ===
+A("overlay").addEventListener("click", (ev) => {
+    if (!files[currentFileIdx]) return;
+    const canvas = A("overlay");
+    const rect = canvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left;
+    const my = ev.clientY - rect.top;
+
+    // Get last rendered frame info
+    const f = files[currentFileIdx];
+    const cacheKey = `${f.path}__${currentFrame}`;
+    const frameData = frameCache[cacheKey];
+    if (!frameData) return;
+
+    // Find the scale/offset used in drawOverlay
+    const container = A("videoContainer");
+    const video = A("videoElement");
+    if (!video || !video.videoWidth) return;
+    const iw = video.videoWidth;
+    const imgRect = video.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const ox = imgRect.left - containerRect.left;
+    const oy = imgRect.top - containerRect.top;
+    const scale = imgRect.width / iw;
+
+    // Find closest node
+    let minDist = Infinity;
+    let closest = null;
+    frameData.instances.forEach((inst, iIdx) => {
+        inst.points.forEach(pt => {
+            if (pt.x == null || pt.y == null) return;
+            const sx = ox + pt.x * scale;
+            const sy = oy + pt.y * scale;
+            const d = Math.hypot(mx - sx, my - sy);
+            if (d < minDist && d < 20) {
+                minDist = d;
+                closest = { instance_idx: iIdx, track_name: inst.track };
+            }
+        });
+    });
+
+    if (closest) {
+        selectedInstance = closest;
+        const label = trackLabels[closest.track_name] || closest.track_name;
+        A("selectedInfo").innerHTML = `<strong>${label}</strong> (${closest.track_name})`;
+        drawOverlay(frameData);
+    } else {
+        selectedInstance = null;
+        A("selectedInfo").textContent = "None";
+        drawOverlay(frameData);
+    }
+});
+
+// === Track assignment ===
+function assignTrack(newTrack) {
+    if (!selectedInstance || !files[currentFileIdx]) return;
+    const f = files[currentFileIdx];
+    if (selectedInstance.track_name === newTrack) return;
+
+    edits.push({
+        frame_idx: currentFrame,
+        instance_idx: selectedInstance.instance_idx,
+        old_track: selectedInstance.track_name,
+        new_track: newTrack,
+    });
+
+    // Update the in-memory cache so the overlay updates immediately
+    const cacheKey = `${f.path}__${currentFrame}`;
+    const fd = frameCache[cacheKey];
+    if (fd && fd.instances[selectedInstance.instance_idx]) {
+        fd.instances.forEach(inst => {
+            if (inst.track === selectedInstance.track_name) inst.track = newTrack;
+            else if (inst.track === newTrack) inst.track = selectedInstance.track_name;
+        });
+    }
+
+    selectedInstance.track_name = newTrack;
+    renderEditList();
+    drawOverlay(frameCache[cacheKey]);
+    statusMsg(`Assigned to ${trackLabels[newTrack] || newTrack}`);
+}
+
+A("assignT0").onclick = () => {
+    const f = files[currentFileIdx];
+    if (f) assignTrack(f.tracks[0]);
+};
+A("assignT1").onclick = () => {
+    const f = files[currentFileIdx];
+    if (f && f.tracks[1]) assignTrack(f.tracks[1]);
+};
+A("swapAll").onclick = swapAllTracks;
+
+function renderEditList() {
+    const el = A("editList");
+    if (edits.length === 0) {
+        el.innerHTML = '<span style="color:var(--muted);">No edits yet</span>';
+        return;
+    }
+    el.innerHTML = edits.map((e, i) => `
+        <div class="edit-item">
+          f${e.frame_idx}: ${e.old_track} → ${e.new_track}<span class="undo" onclick="undoEdit(${i})">↩</span>
+        </div>
+    `).join("");
+}
+
+function undoEdit(idx) {
+    if (idx < 0 || idx >= edits.length) return;
+    const e = edits.splice(idx, 1)[0];
+    // Revert cache
+    const f = files[currentFileIdx];
+    const cacheKey = `${f.path}__${e.frame_idx}`;
+    const fd = frameCache[cacheKey];
+    if (fd && fd.instances[e.instance_idx]) {
+        fd.instances[e.instance_idx].track = e.old_track;
+    }
+    renderEditList();
+}
+
+// === Save ===
+A("saveBtn").onclick = async () => {
+    if (!files[currentFileIdx]) return;
+    const f = files[currentFileIdx];
+    const payload = {
+        file: f.path,
+        edits: edits,
+        track_labels: trackLabels,
+        propagation: {
+            enabled: A("propagateEnabled").checked,
+            mode: A("propMode").value,
+            distance_px: parseInt(A("propDist").value),
+            max_frames: A("propFrameLimit").checked ? parseInt(A("propFrames").value) : null,
+        },
+    };
+    A("saveBtn").disabled = true;
+    A("saveBtn").textContent = "Saving...";
+    try {
+        const res = await fetch("/api/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.saved) {
+            statusMsg(`Saved: ${data.saved.split("/").slice(-1)[0]}`);
+            edits = [];
+            renderEditList();
+        } else {
+            statusMsg("Error: " + (data.error || "unknown"), true);
+        }
+    } catch (err) {
+        statusMsg("Network error: " + err.message, true);
+    }
+    A("saveBtn").disabled = false;
+    A("saveBtn").textContent = "Save to corrected/";
+};
+
+function statusMsg(msg, isError) {
+    const el = A("status");
+    el.textContent = msg;
+    el.style.color = isError ? "var(--accent)" : "var(--green)";
+    if (!isError) setTimeout(() => { el.textContent = ""; }, 3000);
+}
+
+// === Playback ===
+function startPlayback() {
+    const video = A("videoElement");
+    playing = true;
+    video.playbackRate = playSpeed;
+    A("playPauseBtn").innerHTML = "⏸";
+    A("pausedIndicator").style.display = "none";
+    video.play().catch(err => statusMsg("Could not start video playback: " + err.message, true));
+    syncPlaybackLoop();
+}
+
+function stopPlayback() {
+    const video = A("videoElement");
+    playing = false;
+    video.pause();
+    A("playPauseBtn").innerHTML = "▶";
+    A("pausedIndicator").style.display = "block";
+    if (syncRequest) cancelAnimationFrame(syncRequest);
+    syncRequest = null;
+}
+
+function syncPlaybackLoop() {
+    if (!playing) return;
+    syncOverlayFromVideo(false);
+    if (currentFrame >= totalFrames - 1) {
+        stopPlayback();
+        return;
+    }
+    syncRequest = requestAnimationFrame(syncPlaybackLoop);
+}
+
+A("playPauseBtn").onclick = () => playing ? stopPlayback() : startPlayback();
+A("firstBtn").onclick = () => { stopPlayback(); seekToFrame(0); };
+A("lastBtn").onclick = () => { stopPlayback(); seekToFrame(totalFrames - 1); };
+A("bwdBtn").onclick = () => { stopPlayback(); seekToFrame(currentFrame - 1); };
+A("fwdBtn").onclick = () => { stopPlayback(); seekToFrame(currentFrame + 1); };
+A("bwd10Btn").onclick = () => { stopPlayback(); seekToFrame(currentFrame - 10); };
+A("fwd10Btn").onclick = () => { stopPlayback(); seekToFrame(currentFrame + 10); };
+A("frameInput").onchange = () => { stopPlayback(); seekToFrame(parseInt(A("frameInput").value) || 0); };
+
+A("prevFile").onclick = () => {
+    if (currentFileIdx > 0) { stopPlayback(); loadFile(currentFileIdx - 1); }
+};
+A("nextFile").onclick = () => {
+    if (currentFileIdx < files.length - 1) { stopPlayback(); loadFile(currentFileIdx + 1); }
+};
+
+// Speed buttons
+document.querySelectorAll(".speed-btns button").forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll(".speed-btns button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        playSpeed = parseFloat(btn.dataset.speed);
+        A("videoElement").playbackRate = playSpeed;
+    };
+});
+
+// Propagation sliders
+A("propDist").oninput = () => {
+    A("propDistVal").textContent = A("propDist").value + " px";
+    drawDistanceTimeline();
+};
+A("propFrames").oninput = () => { A("propFramesVal").textContent = A("propFrames").value; };
+A("propFrameLimit").onchange = () => {
+    const enabled = A("propFrameLimit").checked;
+    A("propFrames").disabled = !enabled;
+    A("propFramesVal").textContent = enabled ? A("propFrames").value : "off";
+};
+A("propMode").onchange = () => {
+    const mode = A("propMode").value;
+    A("propHelp").textContent = mode === "smart"
+        ? "Smart mode swaps only while pose/motion continuity says the swapped identity is clearly better; min distance stops ambiguous crossings."
+        : "Current mode swaps outward until animals get closer than min distance.";
+};
+A("zoomSlider").oninput = () => {
+    videoZoom = parseInt(A("zoomSlider").value, 10) / 100;
+    applyVideoZoom();
+};
+
+function seekFromTimelineEvent(ev) {
+    if (!totalFrames) return;
+    const rect = A("distanceTimeline").getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+    stopPlayback();
+    seekToFrame(Math.round(frac * (totalFrames - 1)));
+}
+
+A("distanceTimeline").addEventListener("pointerdown", ev => {
+    A("distanceTimeline").setPointerCapture(ev.pointerId);
+    seekFromTimelineEvent(ev);
+});
+A("distanceTimeline").addEventListener("pointermove", ev => {
+    if (ev.buttons !== 1) return;
+    seekFromTimelineEvent(ev);
+});
+
+// Keyboard shortcuts
+document.addEventListener("keydown", ev => {
+    if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT") return;
+    switch (ev.key) {
+        case "ArrowLeft":  ev.preventDefault(); stopPlayback(); seekToFrame(currentFrame - 1); break;
+        case "ArrowRight": ev.preventDefault(); stopPlayback(); seekToFrame(currentFrame + 1); break;
+        case " ":           ev.preventDefault(); playing ? stopPlayback() : startPlayback(); break;
+        case "Home":        ev.preventDefault(); stopPlayback(); seekToFrame(0); break;
+        case "End":         ev.preventDefault(); stopPlayback(); seekToFrame(totalFrames - 1); break;
+        case "a": case "A":
+            if (selectedInstance && files[currentFileIdx]) {
+                assignTrack(files[currentFileIdx].tracks[0]);
+            }
+            break;
+        case "d": case "D":
+            if (selectedInstance && files[currentFileIdx] && files[currentFileIdx].tracks[1]) {
+                assignTrack(files[currentFileIdx].tracks[1]);
+            }
+            break;
+    }
+});
+
+window.addEventListener("resize", () => {
+    if (currentFrameData) drawOverlay(currentFrameData);
+    drawDistanceTimeline();
+});
+
+// Init
+loadFiles();
+</script>
+</body>
+</html>
