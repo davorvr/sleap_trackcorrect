@@ -2,12 +2,12 @@
 # SLEAP Social Track Corrector — start server
 #
 # Usage:
-#   bash explore/sleap_review/start_server.sh [LABELS_DIR VIDEO_DIR] [PORT]
+#   bash ./start_server.sh [LABELS_DIR VIDEO_DIR] [PORT]
 
 set -euo pipefail
 
 if [[ $# -ne 0 && $# -ne 1 && $# -ne 2 && $# -ne 3 ]]; then
-  echo "Usage: bash explore/sleap_review/start_server.sh [LABELS_DIR VIDEO_DIR] [PORT]" >&2
+  echo "Usage: bash ./start_server.sh [LABELS_DIR VIDEO_DIR] [PORT]" >&2
   echo "" >&2
   echo "Defaults:" >&2
   echo "  LABELS_DIR = ./predictions" >&2
@@ -15,10 +15,10 @@ if [[ $# -ne 0 && $# -ne 1 && $# -ne 2 && $# -ne 3 ]]; then
   echo "  PORT       = 8500" >&2
   echo "" >&2
   echo "Examples:" >&2
-  echo "  bash explore/sleap_review/start_server.sh" >&2
-  echo "  bash explore/sleap_review/start_server.sh 8501" >&2
-  echo "  bash explore/sleap_review/start_server.sh \\" >&2
-  echo "    sources/predictions/cleaned/social \\" >&2
+  echo "  bash ./start_server.sh" >&2
+  echo "  bash ./start_server.sh 8501" >&2
+  echo "  bash ./start_server.sh \\" >&2
+  echo "    /path/to/predictions/files \\" >&2
   echo "    /path/to/video/files \\" >&2
   echo "    8500" >&2
   exit 2
