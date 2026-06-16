@@ -7,7 +7,9 @@ Standalone local web app for reviewing two-animal social SLEAP `.slp` files and 
 1. Populate `videos/` and `predictions/` directories
 2. Run `bash ./start_server.sh`
 
-## Data Folders
+## Detailed instructions
+
+### Data Folders
 
 By default, the launcher uses these folders inside this tool directory:
 
@@ -18,7 +20,7 @@ videos/        # put matching .mp4 files here
 
 The folders are intentionally empty in git. Their contents are ignored so large data files do not get committed.
 
-## Create The Tool Environment
+### Create The Tool Environment
 
 From this repository root:
 
@@ -42,7 +44,7 @@ bash ./start_server.sh LABELS_DIR VIDEO_DIR 8500
 
 `LABELS_DIR` can be relative or absolute. `VIDEO_DIR` can be relative or absolute. Corrected files are saved to `LABELS_DIR/corrected/`.
 
-## Direct uv Run
+### Direct uv Run
 
 ```bash
 uv run --project ./ python serve.py \
